@@ -1,0 +1,11 @@
+data/
+__pycache__/
+logs/
+passwd/
+admin/services/goaccess/front/
+.env
+proxy/vhost/localhost
+webapp/video/
+
+proxy/certs
+proxy/html
