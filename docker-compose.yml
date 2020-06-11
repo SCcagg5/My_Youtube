@@ -1,0 +1,100 @@
+version: '3'
+
+networks:
+  db-net:
+    internal: true
+  proxy:
+    driver: bridge
+
+services:
+  database:
+    image: mysql:5.7
+    container_name: database
+    restart: always
+    networks:
+      - db-net
+    volumes:
+      - ./webapp/db/sql/data:/var/lib/mysql
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: 1
+      MYSQL_USER: ${DB_USER}
+      MYSQL_DATABASE: youtube
+      MYSQL_PASSWORD: ${DB_PASS}
+
+
+  map_bck-end:
+    build: ./webapp/api
+    expose:
+      - 8080
+    tty: true
+    stdin_open: true
+    depends_on:
+      - database
+    networks:
+      - db-net
+      - proxy
+    volumes:
+      - ./webapp/api:/home/api/:ro
+      - ./webapp/video:/home/video/
+    environment:
+      VIRTUAL_HOST: api.${DOMAIN}
+      VIRTUAL_PORT: 8080
+      LETSENCRYPT_HOST: api.${DOMAIN}
+      LETSENCRYPT_EMAIL: ${EMAIL}
+      API_MOD: ${API_MOD}
+      API_PASS: password
+      API_ADM: ${API_ADM}
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+
+  video:
+      image: nginx
+      container_name: video
+      restart: always
+      networks:
+        - proxy
+      volumes:
+        - ./webapp/video:/usr/share/nginx/html:ro
+      environment:
+        VIRTUAL_HOST: video.${DOMAIN}
+        VIRTUAL_PORT: 8080
+        LETSENCRYPT_HOST: video.${DOMAIN}
+        LETSENCRYPT_EMAIL: ${EMAIL}
+
+
+  nginx:
+    image: jwilder/nginx-proxy:alpine
+    container_name: nginx
+    restart: always
+    labels:
+      com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy: 'true'
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./proxy/logs/global:/var/log/nginx
+      - ./proxy/conf/proxy.conf:/etc/nginx/conf.d/proxy.conf:ro
+      - ./proxy/vhost:/etc/nginx/vhost.d
+      - ./proxy/passwd:/etc/nginx/htpasswd
+      - ./proxy/logs/services:/customlogs
+      - ./proxy/html:/usr/share/nginx/html
+      - ./proxy/certs:/etc/nginx/certs:ro
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    networks:
+      - proxy
+
+  letsencrypt:
+    image: jrcs/letsencrypt-nginx-proxy-companion
+    container_name: letsencrypt
+    volumes:
+      - ./proxy/vhost:/etc/nginx/vhost.d
+      - ./proxy/certs:/etc/nginx/certs:rw
+      - ./proxy/html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - nginx
+    networks:
+      - proxy
+
+volumes:
+   db:
