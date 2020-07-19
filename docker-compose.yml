@@ -1,9 +1,11 @@
-version: '3'
+version: '3.5'
 
 networks:
   db-net:
+    name: my_youtube_db-net
     internal: true
   proxy:
+    name: my_youtube_proxy
     driver: bridge
 
 services:
@@ -21,6 +23,34 @@ services:
       MYSQL_DATABASE: youtube
       MYSQL_PASSWORD: ${DB_PASS}
 
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.6.0
+    container_name: elasticsearch
+    environment:
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=false
+      - cluster.routing.allocation.disk.threshold_enabled=false
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./webapp/db/elastic:/usr/share/elasticsearch/data
+    networks:
+      - db-net
+
+  mail_sender:
+    image: catatnight/postfix
+    container_name: mail_sender
+    ports:
+      - 127.0.0.1:25:25
+    environment:
+      smtp_user: ${SMTP_USER}:${SMTP_PASS}
+      maildomain: ${SMTP_SERVER}
+    networks:
+      - proxy
 
   map_bck-end:
     build: ./webapp/api
@@ -44,6 +74,9 @@ services:
       API_MOD: ${API_MOD}
       API_PASS: password
       API_ADM: ${API_ADM}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_SERVER: ${SMTP_SERVER}
       DB_USER: ${DB_USER}
       DB_PASS: ${DB_PASS}
 

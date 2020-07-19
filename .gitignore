@@ -9,3 +9,4 @@ webapp/video/
 
 proxy/certs
 proxy/html
+webapp/db/elastic/

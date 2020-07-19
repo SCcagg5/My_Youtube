@@ -1,11 +1,11 @@
-version: '3'
+version: '3.5'
 networks:
    db-net:
      external:
-         name: youtube_db-net
+         name: my_youtube_db-net
    proxy:
      external:
-         name: youtube_proxy
+         name: my_youtube_proxy
 
 services:
    phpmyadmin:

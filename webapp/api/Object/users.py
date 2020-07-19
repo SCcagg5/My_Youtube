@@ -2,10 +2,12 @@ import json, datetime, time
 import jwt
 import hashlib
 import time
+import base64
 import os
 import re
 import uuid
 import phonenumbers
+from .mail import Mailer
 from .sql import sql
 
 class user:
@@ -33,6 +35,37 @@ class user:
             return  [False, "Invalid usrtoken", 400]
         return [True, {}, None]
 
+    def verify_key(self, key):
+        arr_key = key.split("|")
+        if len(arr_key) < 2:
+            return [False, "Invalid key", 400]
+        email = base64.b64decode(str.encode(arr_key[0])).decode("utf-8")
+        password = arr_key[1]
+        res = sql.get("SELECT `id`, `password`, `valid` \
+                       FROM `user` \
+                       WHERE `email` = %s",
+                       (email))
+        if len(res) != 1:
+            return [False, "Invalid user or key: " + email, 400]
+        if self.__activationkey(email, res[0][1]) != key:
+            return [False, "Invalid user or key: "+ self.__activationkey(email, res[0][1]), 400]
+        if int(res[0][2]) != 0:
+            return [False, "Acccount already activated", 400]
+        succes = sql.input("UPDATE `user` SET valid = 1 WHERE `email` = %s", (email))
+        if not succes:
+            return [False, "data input error", 500]
+        self.id = res[0][0]
+        return [True, {}, None]
+
+    def check_activation(self, id = None):
+        id = self.__getid(id, self.id)
+        res = sql.get("SELECT `valid`  FROM `user` WHERE `id` = %s", (id))
+        if len(res) < 1:
+            return [False, "Verification error", 500]
+        if int(res[0][0]) == 1:
+            return [True, {}, None]
+        return [False, "Invalid right, activate your account", 401]
+
     def register(self, usr, pseudo, email, passw):
         if self.__exist_email(email):
             return [False, "Email already in use", 400]
@@ -45,10 +78,16 @@ class user:
         password = self.__hash(email, passw)
         date = str(int(round(time.time() * 1000)))
 
-        succes = sql.input("INSERT INTO `user` (`id`, `username`, `pseudo`, `email`, `password`, `date`) VALUES (%s, %s, %s, %s, %s, %s)", \
-        (id, usr, pseudo, email, password, date))
+        succes = sql.input("INSERT INTO `user` (`id`, `username`, `pseudo`, `email`, `password`, `date`, `valid`) VALUES (%s, %s, %s, %s, %s, %s, %s)", \
+        (id, usr, pseudo, email, password, date, 0))
         if not succes:
             return [False, "data input error", 500]
+        key = self.__activationkey(email, password)
+        #try:
+        Mailer().new_user(email, key, int(date)/1000)
+        #except:
+        #    sql.input("DELETE FROM `user` WHERE `email` = %s", (email,))
+        #    return [False, "Registration error", 500]
         return [True, {}, None]
 
     def login(self, email, passw):
@@ -123,6 +162,9 @@ class user:
         salted = password[:n] + str(s) + password[n:] + secret
         hashed = hashlib.sha512(salted.encode('utf-8')).hexdigest()
         return hashed
+
+    def __activationkey(self, email, password):
+        return base64.b64encode(str.encode(email)).decode("utf-8")  + '|' + hashlib.sha512((email + password).encode('utf-8')).hexdigest()
 
     def __exist_email(self, email):
         res = sql.get("SELECT `id` FROM `user` WHERE `email` = %s", (email))
