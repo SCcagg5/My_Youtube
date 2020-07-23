@@ -27,10 +27,11 @@ class video:
 
         succes = sql.input("INSERT INTO `video` (`id`, `user_id`, `name`, `ext`, `date`) VALUES (%s, %s, %s, %s, %s)", \
         (id, usr_id, name_or, ext, date))
+        res = es.index(index='documents', body={"user_id": user_id, "doc_id": id, "ext": ext, "name": name_or, "date": date}, request_timeout=30)
         if not succes:
             return [False, "data input error", 500]
         return [True, {"id": id, "path": "{user_id}/{file}{ext}".format(user_id=usr_id, file=id, ext=ext)}, None]
-   
+
     def infos(self):
         res = sql.get("SELECT id, user_id, name, ext, date FROM `video` WHERE id = %s", (self.id))
         if len(res) == 0:
@@ -48,16 +49,44 @@ class video:
 
     def all_video(self, nm = "", usr = "",  page = 0, perPage = None, strict = False):
         total = sql.get("SELECT COUNT(id) FROM `video`", ())[0][0]
-        name = "%" + str("" if nm is None else nm) + "%"
-        user = "" if usr is None else usr
-        page = 0 if page is None or int(page) - 1 < 0 else int(page) - 1
-        perPage = 25 if perPage is None or perPage < 1 else int(perPage)
-        res = sql.get("SELECT id, user_id, name, ext, date FROM `video` WHERE user_id = %s " + ("AND" if strict else "OR") + " name LIKE %s LIMIT %s OFFSET %s", (user, name, perPage, perPage * page))
-
+        word = "" if nm is None else nm
+        page = 1 if page is None or int(page) < 2 else int(page)
+        size = 20 if size is None or int(size) < 20 else int(size)
+        query = {
+          "size": size,
+          "from" : (page - 1)  * size,
+          "_source":["user_id", "doc_id", "ext", "name", "date"],
+          "query": {
+                "bool": {
+                    "should": [
+                        {
+                         "match": {
+                            "name": {
+                                "query": "\"" + word +"\"",
+                                "operator": "and"
+                            }
+                          }
+                        }
+                    ]
+                }
+            }
+        }
+        if usr != "":
+            query["query"]["bool"]["should"].append(
+                {
+                 "match": {
+                    "user_id": {
+                        "query": usr
+                    }
+                  }
+                }
+            )
+        es.indices.refresh(index="documents")
+        res = es.search(index="documents", body=query, request_timeout=600)["hits"]["hits"]
         i = 0
         ret = {}
         while i < len(res):
-            ret[res[i][0]] = {"id": res[i][0], "path": "{user_id}/{file}{ext}".format(user_id=res[i][1], file=res[i][0], ext=res[i][3]), "name": res[i][2], "date": res[i][4]}
+            ret[res[i][0]] = {"id": res[i]["_source"]["doc_id"], "path": "{user_id}/{file}{ext}".format(user_id=res[i]["_source"]["user_id"], file=res[i]["_source"]["doc_id"], ext=res[i]["_source"]["ext"]), "name": res[i]["_source"]["name"], "date":  res[i]["_source"]["date"]}
             i += 1
         return [True, {"videos": ret, "pager": {"total": total, "current": {"from": int(perPage * page + 1), "to": int(perPage * (page + 1))}, "options": {"name": nm, "user": usr,  "perPage": perPage, "page": page + 1}}}, None]
 
