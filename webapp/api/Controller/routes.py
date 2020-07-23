@@ -12,6 +12,7 @@ def setuproute(app, call):
     @app.route('/user/<>/video',    ['OPTIONS', 'POST'],        lambda x = None: call([authuser, post_video])                        )
     @app.route('/user/<>/videos',   ['OPTIONS', 'GET'],         lambda x = None: call([get_videos])                                  )
     @app.route('/video/<>',         ['OPTIONS', 'PATCH'],       lambda x = None: call([authuser, patch_video])                       )
+    @app.route('/video/<>',         ['OPTIONS', 'GET'],       lambda x = None: call([get_video])                       )
     @app.route('/video/<>',         ['OPTIONS', 'PUT'],         lambda x = None: call([authuser, modify_video])                      )
     @app.route('/video/<>',         ['OPTIONS', 'DELETE'],      lambda x = None: call([authuser, delete_video])                      )
     @app.route('/videos',        	['OPTIONS', 'GET'],         lambda x = None: call([get_all_videos])                              )

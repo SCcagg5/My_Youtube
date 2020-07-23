@@ -19,8 +19,8 @@ call = lambda x : callnext(request, response).call(x)
 
 @app.hook('after_request')
 def enable_cors():
-    response.headers['Access-Control-Allow-Origin'] = weba
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, PATCH, POST, OPTIONS, DELETE, PUT, '
     response.headers['Access-Control-Allow-Headers'] = '*'
 
 

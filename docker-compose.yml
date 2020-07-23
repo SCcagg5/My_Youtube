@@ -5,8 +5,8 @@ networks:
     name: my_youtube_db-net
     internal: true
   proxy:
-    name: my_youtube_proxy
-    driver: bridge
+    external: 
+      name: docker-compose_proxy
 
 services:
   database:
@@ -44,8 +44,8 @@ services:
   mail_sender:
     image: catatnight/postfix
     container_name: mail_sender
-    ports:
-      - 127.0.0.1:25:25
+    expose:
+      - 25
     environment:
       smtp_user: ${SMTP_USER}:${SMTP_PASS}
       maildomain: ${SMTP_SERVER}
@@ -54,8 +54,8 @@ services:
 
   map_bck-end:
     build: ./webapp/api
-    expose:
-      - 8080
+    ports:
+      - 8080:8080
     tty: true
     stdin_open: true
     depends_on:
@@ -94,40 +94,6 @@ services:
         LETSENCRYPT_HOST: video.${DOMAIN}
         LETSENCRYPT_EMAIL: ${EMAIL}
 
-
-  nginx:
-    image: jwilder/nginx-proxy:alpine
-    container_name: nginx
-    restart: always
-    labels:
-      com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy: 'true'
-    ports:
-      - 80:80
-      - 443:443
-    volumes:
-      - ./proxy/logs/global:/var/log/nginx
-      - ./proxy/conf/proxy.conf:/etc/nginx/conf.d/proxy.conf:ro
-      - ./proxy/vhost:/etc/nginx/vhost.d
-      - ./proxy/passwd:/etc/nginx/htpasswd
-      - ./proxy/logs/services:/customlogs
-      - ./proxy/html:/usr/share/nginx/html
-      - ./proxy/certs:/etc/nginx/certs:ro
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-    networks:
-      - proxy
-
-  letsencrypt:
-    image: jrcs/letsencrypt-nginx-proxy-companion
-    container_name: letsencrypt
-    volumes:
-      - ./proxy/vhost:/etc/nginx/vhost.d
-      - ./proxy/certs:/etc/nginx/certs:rw
-      - ./proxy/html:/usr/share/nginx/html
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    depends_on:
-      - nginx
-    networks:
-      - proxy
 
 volumes:
    db:

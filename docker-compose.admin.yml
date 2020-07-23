@@ -5,7 +5,7 @@ networks:
          name: my_youtube_db-net
    proxy:
      external:
-         name: my_youtube_proxy
+         name: docker-compose_proxy
 
 services:
    phpmyadmin:

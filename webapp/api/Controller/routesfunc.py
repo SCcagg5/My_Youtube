@@ -73,13 +73,13 @@ def delete_user(cn, nextc):
     return cn.call_next(nextc, err)
 
 def modify_user(cn, nextc):
-    err = check.contain(cn.pr, ["username", "pseudo", "email", "password"])
+    err = check.contain(cn.pr, ["username", "pseudo", "email"])
     if not err[0]:
         return cn.toret.add_error(err[1], err[2])
     cn.pr = err[1]
 
     use = cn.private["user"]
-    err = use.update_data(cn.rt["user"], cn.pr["username"], cn.pr["pseudo"], cn.pr["email"], cn.pr["password"])
+    err = use.update_data(cn.rt["user"], cn.pr["username"], cn.pr["pseudo"], cn.pr["email"])
     return cn.call_next(nextc, err)
 
 def get_user(cn, nextc):
@@ -110,6 +110,10 @@ def get_videos(cn, nextc):
     cn.get = check.setnoneopt(cn.get, ["name", "perpage", "page"])
     user = str(cn.rt["user"] if "user" in cn.rt else "")
     err = video().all_video(cn.get["name"], user, cn.get["page"], cn.get["perpage"], True)
+    return cn.call_next(nextc, err)
+
+def get_video(cn, nextc):
+    err = video(cn.rt["video"] if "video" in cn.rt else None).infos()
     return cn.call_next(nextc, err)
 
 def patch_video(cn, nextc):

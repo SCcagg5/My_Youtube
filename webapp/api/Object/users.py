@@ -113,17 +113,15 @@ class user:
         sql.input("DELETE FROM `user` WHERE `id` = %s", (self.id))
         return [True, {}, None]
 
-    def update_data(self, id, username, pseudo, email, passw):
+    def update_data(self, id, username, pseudo, email):
          if self.id != str(id):
              return [False, "You cannot edit another user", 403]
-         password = self.__hash(email, passw)
          date = str(int(round(time.time() * 1000)))
-
          succes = sql.input("INSERT `user` (`id`, `username`, `pseudo`, `email`, `password`, `date`) \
                             VALUES (%s, %s, %s, %s, %s, %s) \
                             ON DUPLICATE KEY \
-                            UPDATE `username` = %s, `pseudo` = %s, `email` = %s, `password` = %s",
-                 (id, username, pseudo, email, password, date, username, pseudo, email, password))
+                            UPDATE `username` = %s, `pseudo` = %s, `email` = %s",
+                 (id, username, pseudo, email, 'data', date, username, pseudo, email))
          if not succes:
              return [False, "data input error", 500]
          return [True, {}, None]

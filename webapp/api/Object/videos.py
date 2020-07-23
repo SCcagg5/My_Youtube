@@ -30,6 +30,13 @@ class video:
         if not succes:
             return [False, "data input error", 500]
         return [True, {"id": id, "path": "{user_id}/{file}{ext}".format(user_id=usr_id, file=id, ext=ext)}, None]
+   
+    def infos(self):
+        res = sql.get("SELECT id, user_id, name, ext, date FROM `video` WHERE id = %s", (self.id))
+        if len(res) == 0:
+            return [False, "invalid video id", 404]
+        ret = {"id": res[0][0], "path": "{user_id}/{file}{ext}".format(user_id=res[0][1], file=res[0][0], ext=res[0][3]), "name": res[0][2], "date": res[0][4]}
+        return [True, {"video": ret}, None]
 
     def delete(self, id, usr_id):
         if self.user["id"] is None:
